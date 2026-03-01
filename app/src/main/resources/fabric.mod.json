@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "everlastingfixes",
+  "version": "1.0.0",
+  "name": "Everlasting Fixes",
+  "description": "Stops session-based lag and memory leaks for indefinite playtimes.",
+  "authors": ["Everlasting Fixes"],
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.everlasting.EverlastingFixes"
+    ]
+  },
+  "mixins": [
+    "everlastingfixes.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": ">=1.21.1 <=1.21.11",
+    "fabric": "*",
+    "java": ">=21"
+  }
+}
