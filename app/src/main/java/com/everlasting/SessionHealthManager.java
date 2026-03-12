@@ -2,15 +2,22 @@ package com.everlasting;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.world.ClientWorld;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 // Entity purge methods removed — 1.21.1 refactored client entity storage
 // away from Int2ObjectMap, so direct lookup/purge is no longer viable.
 
+/**
+ * SessionHealthManager — REFACTORED.
+ *
+ * Changes:
+ *  - Removed all calls to ModelManagerSoftReset.softReset() (which triggered reloadResources()).
+ *  - Deep flush now delegates to MemoryManager.silentPurge() — zero loading screens.
+ *  - All System.gc() calls are now async via MemoryManager.triggerAsyncGc().
+ *  - The "memory flush" is no longer tied to screen-open events (right-click interaction).
+ *    Instead, purging is handled by MemoryManager's 15-minute background timer
+ *    and the pause-menu idle hook.
+ */
 public final class SessionHealthManager {
     private static final long SESSION_START_MS = System.currentTimeMillis();
     private static final long ONE_HOUR_MS = 60L * 60L * 1000L;
@@ -26,7 +33,6 @@ public final class SessionHealthManager {
     private static long lastEntityPurgeMs = -1L;
     private static long lastDimensionEnterMs = SESSION_START_MS;
     private static String lastDimensionId = null;
-    private static final AtomicBoolean backgroundGcInFlight = new AtomicBoolean(false);
 
     private SessionHealthManager() {
     }
@@ -50,29 +56,38 @@ public final class SessionHealthManager {
         if (lastDimensionId != null && !lastDimensionId.equals(dimensionId)) {
             long durationMs = now - lastDimensionEnterMs;
             if (durationMs >= TWO_HOURS_MS) {
-                boolean cleared = ModelManagerSoftReset.softReset(client);
-                EverlastingFixes.LOGGER.debug("Soft reset model cache after {} ms in {}. Cleared: {}",
-                        durationMs, lastDimensionId, cleared);
+                // REFACTORED: Use silent purge instead of reloadResources()
+                MemoryManager.silentPurge(client);
+                EverlastingFixes.LOGGER.debug("Silent purge after {} ms in {}.",
+                        durationMs, lastDimensionId);
             }
         }
         lastDimensionId = dimensionId;
         lastDimensionEnterMs = now;
     }
 
+    /**
+     * Called when a screen is opened. REFACTORED: No longer triggers a
+     * model reload or deep flush on screen open. The memory flush logic
+     * is now handled by the MemoryManager background timer and pause-menu
+     * idle hook, not by opening inventory/chest screens (right-click).
+     */
     public static void onScreenOpened(Screen screen, MinecraftClient client) {
-        if (!(screen instanceof HandledScreen<?>)) {
-            return;
-        }
-        long now = System.currentTimeMillis();
-
+        // Deep flush on screen open is REMOVED to prevent the loading screen
+        // glitch that occurred when right-clicking to open a container.
+        //
+        // The old behavior:
+        //   if (needsDeepFlush) { performDeepFlush(client); }
+        //   if (session >= 1hr && ...) { triggerBackgroundGc(); }
+        //
+        // This is now handled by:
+        //   - MemoryManager's 15-minute background timer
+        //   - MemoryManager.onPauseMenuIdle() when Esc menu is open
+        //
+        // We still check for deep flush, but only trigger an async GC, NOT a reload.
         if (needsDeepFlush) {
             needsDeepFlush = false;
-            performDeepFlush(client);
-        }
-
-        if (getSessionDurationMs() >= ONE_HOUR_MS && now - lastScreenGcMs >= THIRTY_MINUTES_MS) {
-            lastScreenGcMs = now;
-            triggerBackgroundGc("screen-open");
+            MemoryManager.triggerAsyncGc("deep-flush-deferred");
         }
     }
 
@@ -98,25 +113,5 @@ public final class SessionHealthManager {
 
     private static long getSessionDurationMs() {
         return System.currentTimeMillis() - SESSION_START_MS;
-    }
-
-    private static void performDeepFlush(MinecraftClient client) {
-        EverlastingFixes.LOGGER.debug("Performing deep flush after GC pause.");
-        ModelManagerSoftReset.softReset(client);
-        triggerBackgroundGc("deep-flush");
-    }
-
-    private static void triggerBackgroundGc(String reason) {
-        if (!backgroundGcInFlight.compareAndSet(false, true)) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            try {
-                EverlastingFixes.LOGGER.debug("Triggering background GC: {}", reason);
-                System.gc();
-            } finally {
-                backgroundGcInFlight.set(false);
-            }
-        });
     }
 }

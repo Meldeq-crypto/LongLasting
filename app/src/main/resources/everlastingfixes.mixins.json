@@ -6,9 +6,11 @@
   "client": [
     "MinecraftClientMixin",
     "WorldRendererMixin",
+    "WorldRendererAccessor",
     "ClientWorldMixin",
     "ChunkBuilderBuiltChunkMixin",
-    "DebugHudMixin"
+    "DebugHudMixin",
+    "BlockEntityRenderDispatcherMixin"
   ],
   "injectors": {
     "defaultRequire": 1

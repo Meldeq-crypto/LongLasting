@@ -11,5 +11,10 @@ public final class EverlastingFixes implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LOGGER.info("Everlasting Fixes initialized.");
+
+        // Start the background MemoryManager — silent cache purge every 15 minutes.
+        // This replaces the old reloadResources()-based approach that caused
+        // visible loading screens during gameplay.
+        MemoryManager.start();
     }
 }
