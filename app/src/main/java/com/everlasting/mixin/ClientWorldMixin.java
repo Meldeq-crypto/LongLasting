@@ -10,8 +10,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientWorld.class)
 public abstract class ClientWorldMixin {
-    @Inject(method = "removeEntity", at = @At("HEAD"))
-    private void everlastingfixes$preRemoveEntity(int id, Entity.RemovalReason reason, CallbackInfo ci) {
-        EverlastingFixes.LOGGER.debug("Removing client entity {} with reason {}", id, reason);
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void everlastingfixes$onTick(CallbackInfo ci) {
+        // Lightweight hook — heavy entity purging removed because
+        // 1.21.1 refactored entity storage away from Int2ObjectMap.
+        // Future: re-implement via EntityLookup API if needed.
     }
 }

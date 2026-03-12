@@ -23,21 +23,29 @@ public abstract class BlockEntityRenderDispatcherMixin {
             MatrixStack matrices,
             VertexConsumerProvider vertexConsumers,
             CallbackInfo ci) {
-        if (blockEntity.getWorld() == null) {
-            return;
-        }
-        WorldRenderer worldRenderer = MinecraftClient.getInstance().worldRenderer;
-        if (worldRenderer == null) {
-            return;
-        }
-        Frustum frustum = ((WorldRendererAccessor) worldRenderer).everlastingfixes$getFrustum();
-        if (frustum == null) {
-            return;
-        }
-        BlockPos pos = blockEntity.getPos();
-        Box box = new Box(pos).expand(0.5);
-        if (!frustum.isVisible(box)) {
-            ci.cancel();
+        try {
+            if (blockEntity == null || blockEntity.getWorld() == null) {
+                return;
+            }
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client == null || client.worldRenderer == null) {
+                return;
+            }
+            WorldRenderer worldRenderer = client.worldRenderer;
+            Frustum frustum = ((WorldRendererAccessor) worldRenderer).everlastingfixes$getFrustum();
+            if (frustum == null) {
+                return;
+            }
+            BlockPos pos = blockEntity.getPos();
+            if (pos == null) {
+                return;
+            }
+            Box box = new Box(pos).expand(0.5);
+            if (!frustum.isVisible(box)) {
+                ci.cancel();
+            }
+        } catch (Exception e) {
+            // Silently ignore — don't let frustum culling crash the game
         }
     }
 }

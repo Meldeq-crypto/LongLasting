@@ -1,6 +1,7 @@
 package com.everlasting.mixin;
 
 import com.everlasting.EverlastingFixes;
+import com.everlasting.SessionHealthManager;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.world.ClientWorld;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +13,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class WorldRendererMixin {
     @Inject(method = "setWorld", at = @At("HEAD"))
     private void everlastingfixes$clearRenderDataOnWorldSwap(ClientWorld world, CallbackInfo ci) {
-        EverlastingFixes.LOGGER.debug("World swapped; renderer state will be rebuilt.");
+        try {
+            EverlastingFixes.LOGGER.debug("World swapped; renderer state will be rebuilt.");
+            if (world != null) {
+                SessionHealthManager.onWorldChanged(world, net.minecraft.client.MinecraftClient.getInstance());
+            }
+        } catch (Exception e) {
+            EverlastingFixes.LOGGER.warn("Error in world swap hook", e);
+        }
     }
 }

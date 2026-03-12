@@ -1,6 +1,7 @@
 package com.everlasting.mixin;
 
 import com.everlasting.EverlastingFixes;
+import com.everlasting.SessionHealthManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.gui.screen.Screen;
@@ -18,6 +19,7 @@ public abstract class MinecraftClientMixin {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void everlastingfixes$trackPauseMenu(CallbackInfo ci) {
+        SessionHealthManager.onClientTick();
         if (this.currentScreen != null && this.currentScreen.shouldPause()) {
             if (this.everlastingfixes$lastPauseStart == -1L) {
                 this.everlastingfixes$lastPauseStart = System.currentTimeMillis();
@@ -39,5 +41,6 @@ public abstract class MinecraftClientMixin {
             EverlastingFixes.LOGGER.debug("Triggering GC during loading screen.");
             System.gc();
         }
+        SessionHealthManager.onScreenOpened(screen, (MinecraftClient) (Object) this);
     }
 }

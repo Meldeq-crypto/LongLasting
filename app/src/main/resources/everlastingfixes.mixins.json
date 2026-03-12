@@ -7,8 +7,8 @@
     "MinecraftClientMixin",
     "WorldRendererMixin",
     "ClientWorldMixin",
-    "BlockEntityRenderDispatcherMixin",
-    "WorldRendererAccessor"
+    "ChunkBuilderBuiltChunkMixin",
+    "DebugHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1
